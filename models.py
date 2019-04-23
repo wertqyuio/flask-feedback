@@ -1,9 +1,6 @@
-from flask_wtf import FlaskForm
-from wtforms import StringField, IntegerField, TextAreaField,  BooleanField
-from wtforms.validators import InputRequired, Optional, Email, NumberRange, URL, AnyOf, Length
-from flask_debugtoolbar import DebugToolbarExtension
 from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
+from sqlalchemy.orm import relationship
 
 
 db = SQLAlchemy()
@@ -21,12 +18,23 @@ class User(db.Model):
     ''' Users table '''
 
     __tablename__ = "users"
-     
-    username = db.Column(db.String(20), unique=True, nullable=False, primary_key=True)
+
+    username = db.Column(db.String(20), unique=True, nullable=False,
+                         primary_key=True)
     password = db.Column(db.Text, nullable=False)
     email = db.Column(db.String(50), nullable=False)
     first_name = db.Column(db.String(30), nullable=False)
     last_name = db.Column(db.String(30), nullable=False)
+
+    feedback = relationship('Feedback', backref="users",
+                            cascade="all, delete-orphan")
+
+    @classmethod
+    def check_invalid_login(cls, session, username):
+        if "username" not in session or username != session["username"]:
+            return True
+        else:
+            return False
 
     @classmethod
     def register(cls, username, pwd, email, first_name, last_name):
@@ -36,9 +44,9 @@ class User(db.Model):
         hashed_utf8 = hashed.decode("utf8")
 
         # return instance of user w/username and hashed pwd
-        return cls(username=username, password=hashed_utf8, email=email, first_name=first_name, last_name=last_name)
+        return cls(username=username, password=hashed_utf8, email=email,
+                   first_name=first_name, last_name=last_name)
 
-    
     @classmethod
     def authenticate(cls, username, pwd):
         """Validate that user exists & password is correct.
@@ -51,7 +59,17 @@ class User(db.Model):
         if u and bcrypt.check_password_hash(u.password, pwd):
             # return user instance
             return u
-            
         else:
             return False
 
+
+class Feedback(db.Model):
+    ''' Feedbacks table '''
+
+    __tablename__ = "feedback"
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    title = db.Column(db.String(100), nullable=False)
+    content = db.Column(db.Text, nullable=False)
+    username = db.Column(db.String(20), db.ForeignKey('users.username'),
+                         nullable=False)

@@ -1,0 +1,6 @@
+{% extends 'feedback.html' %}
+
+{% block subcontent %}
+<button formaction="/feedback/{{feedback.id}}/delete">Delete</button>
+<button formaction="/feedback/{{feedback.id}}/update">Edit</button>
+{% endblock %}

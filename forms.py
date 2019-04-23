@@ -1,6 +1,6 @@
-from wtforms import SelectField, StringField, PasswordField
+from wtforms import StringField, PasswordField
 from flask_wtf import FlaskForm
-from wtforms.validators import InputRequired, DataRequired, EqualTo, Length
+from wtforms.validators import InputRequired, DataRequired, Length
 
 
 class RegisterForm(FlaskForm):
@@ -8,12 +8,12 @@ class RegisterForm(FlaskForm):
 
     username = StringField("Username", validators=[InputRequired()])
     password = PasswordField("Password", validators=[DataRequired()])
-                            #  EqualTo('confirm', 
-                            #                 message='''Passwords
-                            #                             must match''')])
-    email = StringField("Email", validators=[InputRequired()]) # can do email field later
-    first_name = StringField("First Name", validators=[InputRequired(), Length(max=30)]) # add msg ltr
-    last_name = StringField("Last Name", validators=[InputRequired(), Length(max=30)])
+    email = StringField("Email", validators=[InputRequired()])
+    # can do email field later
+    first_name = StringField("First Name", validators=[InputRequired(),
+                             Length(max=30)])
+    last_name = StringField("Last Name", validators=[InputRequired(),
+                            Length(max=30)])
 
 
 class LoginForm(FlaskForm):
@@ -23,4 +23,8 @@ class LoginForm(FlaskForm):
     password = PasswordField("Password", validators=[DataRequired()])
 
 
+class FeedbackForm(FlaskForm):
+    '''Form for adding user feedback.'''
 
+    title = StringField("Title", validators=[InputRequired(), Length(max=100)])
+    content = StringField("Content", validators=[InputRequired()])

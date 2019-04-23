@@ -1,7 +1,7 @@
-from flask import Flask, request, jsonify, redirect, render_template, session
-from models import User, db, connect_db
+from flask import Flask, redirect, render_template, session
+from models import User, db, connect_db, Feedback
 from flask_debugtoolbar import DebugToolbarExtension
-from forms import RegisterForm, LoginForm
+from forms import RegisterForm, LoginForm, FeedbackForm
 
 
 app = Flask(__name__)
@@ -21,7 +21,7 @@ def index():
     return redirect('/register')
 
 
-@app.route('/register', methods=["GET","POST"])
+@app.route('/register', methods=["GET", "POST"])
 def register():
 
     form = RegisterForm()
@@ -34,18 +34,19 @@ def register():
         email = form.email.data
         first_name = form.first_name.data
         last_name = form.last_name.data
-        
-        new_user = User.register(username, password, email, first_name, last_name)
+
+        new_user = User.register(username, password, email,
+                                 first_name, last_name)
         db.session.add(new_user)
         db.session.commit()
-        
-        return redirect('/')
+
+        return redirect('/login')
 
     else:
         return render_template('register.html', form=form)
 
 
-@app.route('/login', methods=["GET","POST"])
+@app.route('/login', methods=["GET", "POST"])
 def login():
 
     form = LoginForm()
@@ -58,8 +59,8 @@ def login():
         user = User.authenticate(name, pwd)
 
         if user:
-            session["user_id"] = user.username  # keep logged in
-            return redirect("/secret")
+            session["username"] = user.username  # keep logged in
+            return redirect(f'/users/{session["username"]}')
 
         else:
             form.username.errors = ["Bad name/password"]
@@ -67,12 +68,86 @@ def login():
     return render_template('login.html', form=form)
 
 
-@app.route('/secret')
-def secret():
+@app.route('/users/<username>')
+def username(username):
+    if User.check_invalid_login(session, username):
+        return redirect('/login')
 
-    if "user_id" not in session:
-        return redirect('/')
+    user = User.query.get(username)
 
-    return "<body></body>"
+    return render_template("user.html", user=user)
 
 
+@app.route('/logout')
+def logout():
+    if "username" in session:
+        session.pop("username")
+    return redirect('/login')
+
+
+@app.route('/users/<username>/feedback/add', methods=['GET', 'POST'])
+def feedback(username):
+    """ renders feedback form if user is logged in"""
+
+    if User.check_invalid_login(session, username):
+        return redirect('/login')
+
+    form = FeedbackForm()
+
+    if form.validate_on_submit():
+        title = form.title.data
+        content = form.content.data
+
+        new_feedback = Feedback(title=title, content=content,
+                                username=session["username"])
+        db.session.add(new_feedback)
+        db.session.commit()
+        return redirect(f'/users/{session["username"]}')
+    else:
+        return render_template("feedback.html", form=form)
+
+
+@app.route('/feedback/<int:feedback_id>/update', methods=["GET", "POST"])
+def show_feedback(feedback_id):
+    feedback = Feedback.query.get_or_404(feedback_id)
+
+    if User.check_invalid_login(session, username):
+        return redirect('/login')
+
+    form = FeedbackForm(obj=feedback)
+    if form.validate_on_submit():
+        feedback.title = form.title.data
+        feedback.content = form.content.data
+
+        db.session.commit()
+        return redirect(f'/users/{session["username"]}')
+    else:
+        return render_template("edit_feedback.html", form=form,
+                               feedback=feedback)
+
+
+@app.route('/feedback/<int:feedback_id>/delete', methods=['POST'])
+def delete_feedback(feedback_id):
+    feedback = Feedback.query.get_or_404(feedback_id)
+
+    if User.check_invalid_login(session, username):
+        return redirect('/login')
+
+    db.session.delete(feedback)
+    db.session.commit()
+
+    return redirect(f'/users/{session["username"]}')
+
+
+@app.route('/users/<username>/delete')
+def delete_user(username):
+    user = User.query.get_or_404(username)
+
+    if "username" not in session or user.username != session["username"]:
+        return redirect('/login')
+
+    session.pop("username")
+    db.session.delete(user)
+    db.session.commit()
+
+    return redirect('/')

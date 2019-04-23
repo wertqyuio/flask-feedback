@@ -13,6 +13,10 @@
 </head>
 
 <body>
+   {% if 'username' in session %} 
+      <a href="/logout">Logout</a>
+      <br>
+   {% endif %}
    {% block content %}BODY CONTENT GOES HERE{% endblock %}
 </body>
 
